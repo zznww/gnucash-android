@@ -288,6 +288,11 @@ public class TransactionsDbAdapter extends DatabaseAdapter<Transaction> {
         return queryBuilder.query(mDb, projectionIn, null, null, null, null, sortOrder);
     }
 
+    public Cursor fetchAllTemplateTransactions() {
+        String sql = "SELECT * FROM " + TransactionEntry.TABLE_NAME
+                + " WHERE " + TransactionEntry.COLUMN_TEMPLATE + "=1";
+        return mDb.rawQuery(sql, null);
+    }
 	/**
 	 * Returns a cursor to a set of all transactions for the account with ID <code>accountID</code>
 	 * or for which this account is the origin account in a double entry

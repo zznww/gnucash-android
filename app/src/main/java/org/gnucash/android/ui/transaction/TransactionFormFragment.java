@@ -183,10 +183,13 @@ public class TransactionFormFragment extends Fragment implements
 	 */
 	@Bind(R.id.input_transfer_account_spinner) Spinner mTransferAccountSpinner;
 
+    @Bind(R.id.input_from_account_spinner) Spinner mFromAccountSpinner;
+
     /**
      * Checkbox indicating if this transaction should be saved as a template or not
      */
     @Bind(R.id.checkbox_save_template) CheckBox mSaveTemplateCheckbox;
+    @Bind(R.id.checkbox_add_template) CheckBox mAddTemplateCheckbox;
 
     @Bind(R.id.input_recurrence) TextView mRecurrenceTextView;
 
@@ -308,6 +311,11 @@ public class TransactionFormFragment extends Fragment implements
 		mTransactionsDbAdapter = TransactionsDbAdapter.getInstance();
 		if (transactionUID != null) {
             mTransaction = mTransactionsDbAdapter.getRecord(transactionUID);
+            if(mTransaction.isTemplate()){//create a new non-template txn based on template
+                mTransaction = new Transaction(mTransaction,true);
+                mTransaction.setTemplate(false);
+                mTransaction.setTime(System.currentTimeMillis());
+            }
         }
 
         setListeners();
@@ -343,9 +351,43 @@ public class TransactionFormFragment extends Fragment implements
             }
         });
 
+        mFromAccountSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            /**
+             * Flag for ignoring first call to this listener.
+             * The first call is during layout, but we want it called only in response to user interaction
+             */
+            boolean userInteraction = false;
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String newid = mAccountsDbAdapter.getUID(id);
+                for (Split split : mSplitsList) {
+                    if (split.getAccountUID().equals(mAccountUID)) {
+                        split.setAccountUID(newid);
+                    }
+                }
+                mAccountUID = newid;
+                mAccountType = mAccountsDbAdapter.getAccountType(mAccountUID);
+                mTransactionTypeSwitch.setAccountType(mAccountType);
+                if (!userInteraction) {
+                    userInteraction = true;
+                    return;
+                }
+                startTransferFunds();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
         ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
         assert actionBar != null;
 //        actionBar.setSubtitle(mAccountsDbAdapter.getFullyQualifiedAccountName(mAccountUID));
+
+        setSelectedFromAccount(mAccountsDbAdapter.getID(mAccountUID));
 
         if (mTransaction == null) {
             actionBar.setTitle(R.string.title_add_transaction);
@@ -495,6 +537,8 @@ public class TransactionFormFragment extends Fragment implements
 		mCurrencyTextView.setText(accountCurrency.getSymbol());
 
         mSaveTemplateCheckbox.setChecked(mTransaction.isTemplate());
+        mAddTemplateCheckbox.setChecked(mTransaction.isTemplate());
+        if(mTransaction.isTemplate()) mAddTemplateCheckbox.setEnabled(false);
         String scheduledActionUID = getArguments().getString(UxArgument.SCHEDULED_ACTION_UID);
         if (scheduledActionUID != null && !scheduledActionUID.isEmpty()) {
             ScheduledAction scheduledAction = ScheduledActionDbAdapter.getInstance().getRecord(scheduledActionUID);
@@ -564,18 +608,18 @@ public class TransactionFormFragment extends Fragment implements
      * Only accounts with the same currency can be transferred to
      */
 	private void updateTransferAccountsList(){
-		String conditions = "(" + DatabaseSchema.AccountEntry.COLUMN_UID + " != ?"
-                            + " AND " + DatabaseSchema.AccountEntry.COLUMN_TYPE + " != ?"
+		String conditions = "(" + DatabaseSchema.AccountEntry.COLUMN_TYPE + " != ?"
                             + " AND " + DatabaseSchema.AccountEntry.COLUMN_PLACEHOLDER + " = 0"
                             + ")";
 
         if (mCursor != null) {
             mCursor.close();
         }
-		mCursor = mAccountsDbAdapter.fetchAccountsOrderedByFullName(conditions, new String[]{mAccountUID, AccountType.ROOT.name()});
+		mCursor = mAccountsDbAdapter.fetchAccountsOrderedByFullName(conditions, new String[]{AccountType.ROOT.name()});
 
         mCursorAdapter = new QualifiedAccountNameCursorAdapter(getActivity(), mCursor);
 		mTransferAccountSpinner.setAdapter(mCursorAdapter);
+        mFromAccountSpinner.setAdapter(mCursorAdapter);
 	}
 
     /**
@@ -712,6 +756,21 @@ public class TransactionFormFragment extends Fragment implements
 		}
 	}
 
+    private void setSelectedFromAccount(long accountId){
+        for (int pos = 0; pos < mCursorAdapter.getCount(); pos++) {
+            if (mCursorAdapter.getItemId(pos) == accountId){
+                final int position = pos;
+                mFromAccountSpinner.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        mFromAccountSpinner.setSelection(position);
+                    }
+                }, 100);
+                break;
+            }
+        }
+    }
+
 	/**
 	 * Collects information from the fragment views and uses it to create
 	 * and save a transaction
@@ -817,6 +876,12 @@ public class TransactionFormFragment extends Fragment implements
             // set as not exported because we have just edited it
             mTransaction.setExported(false);
             mTransactionsDbAdapter.addRecord(mTransaction);
+
+            if(mAddTemplateCheckbox.isChecked()&& !mTransaction.isTemplate()){
+                Transaction templateTransaction = new Transaction(mTransaction, true);
+                templateTransaction.setTemplate(true);
+                mTransactionsDbAdapter.addRecord(templateTransaction);
+            }
 
             if (mSaveTemplateCheckbox.isChecked()) {//template is automatically checked when a transaction is scheduled
                 if (!mEditMode) { //means it was new transaction, so a new template

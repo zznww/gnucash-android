@@ -34,8 +34,9 @@ import org.gnucash.android.ui.common.BaseDrawerActivity;
  */
 public class ScheduledActionsActivity extends BaseDrawerActivity {
 
-    public static final int INDEX_SCHEDULED_TRANSACTIONS    = 0;
-    public static final int INDEX_SCHEDULED_EXPORTS         = 1;
+    public static final int INDEX_TEMPLATE_TRANSACTIONS     = 0;
+    public static final int INDEX_SCHEDULED_TRANSACTIONS    = 1;
+    public static final int INDEX_SCHEDULED_EXPORTS         = 2;
 
     ViewPager mViewPager;
 
@@ -50,6 +51,7 @@ public class ScheduledActionsActivity extends BaseDrawerActivity {
         getSupportActionBar().setTitle(R.string.nav_menu_scheduled_actions);
 
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.title_template_transactions));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.title_scheduled_transactions));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.title_scheduled_exports));
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
@@ -92,6 +94,8 @@ public class ScheduledActionsActivity extends BaseDrawerActivity {
         @Override
         public CharSequence getPageTitle(int position) {
             switch (position){
+                case INDEX_TEMPLATE_TRANSACTIONS:
+                    return getString(R.string.title_template_transactions);
                 case INDEX_SCHEDULED_TRANSACTIONS:
                     return getString(R.string.title_scheduled_transactions);
                 case INDEX_SCHEDULED_EXPORTS:
@@ -104,6 +108,8 @@ public class ScheduledActionsActivity extends BaseDrawerActivity {
         @Override
         public Fragment getItem(int position) {
             switch (position){
+                case INDEX_TEMPLATE_TRANSACTIONS:
+                    return new TemplateListFragment();
                 case INDEX_SCHEDULED_TRANSACTIONS:
                     return ScheduledActionsListFragment.getInstance(ScheduledAction.ActionType.TRANSACTION);
                 case INDEX_SCHEDULED_EXPORTS:
@@ -114,7 +120,7 @@ public class ScheduledActionsActivity extends BaseDrawerActivity {
 
         @Override
         public int getCount() {
-            return 2;
+            return 3;
         }
     }
 }

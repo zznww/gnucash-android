@@ -28,7 +28,7 @@ android {
         minSdkVersion 10
         targetSdkVersion 23 //robolectric tests only support up to API level 21 at the moment
         versionCode versionMajor * 10000 + versionMinor * 1000 + versionPatch * 100 + versionBuild
-        versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}.zz"
         resValue "string", "app_version_name", "${versionName}"
         resValue "string", "app_minor_version", "${versionMinor}"
         buildConfigField "boolean", "CAN_REQUEST_RATING", "false"

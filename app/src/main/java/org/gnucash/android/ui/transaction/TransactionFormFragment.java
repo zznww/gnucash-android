@@ -361,6 +361,12 @@ public class TransactionFormFragment extends Fragment implements
 
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                if (!userInteraction) {
+                    userInteraction = true;
+                    return;
+                }
+
                 String newid = mAccountsDbAdapter.getUID(id);
                 for (Split split : mSplitsList) {
                     if (split.getAccountUID().equals(mAccountUID)) {
@@ -370,10 +376,7 @@ public class TransactionFormFragment extends Fragment implements
                 mAccountUID = newid;
                 mAccountType = mAccountsDbAdapter.getAccountType(mAccountUID);
                 mTransactionTypeSwitch.setAccountType(mAccountType);
-                if (!userInteraction) {
-                    userInteraction = true;
-                    return;
-                }
+
                 startTransferFunds();
             }
 
